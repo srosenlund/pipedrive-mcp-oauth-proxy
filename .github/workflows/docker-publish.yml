@@ -22,3 +22,13 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/srosenlund/pipedrive-mcp-oauth-proxy:latest
+      - name: Trigger Sliplane redeploy
+        env: { HOOK: "${{ secrets.SLIPLANE_DEPLOY_HOOK }}" }
+        run: '[ -n "$HOOK" ] && curl -fsS "$HOOK" && echo redeploy-ok || echo "no hook secret set"'
+      - name: Wait for rollout
+        run: sleep 50
+      - name: Smoke test
+        run: |
+          BASE=https://pipedrive-mcp-oauth.sliplane.app
+          c=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/.well-known/oauth-authorization-server")
+          echo "discovery=$c"; test "$c" = "200"

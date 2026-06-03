@@ -1,0 +1,18 @@
+name: health-monitor
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # hver 6. time
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Smoke test alle 3 MCP-services
+        run: |
+          fail=0
+          chk() { c=$(curl -s -o /dev/null -w '%{http_code}' "$1"); echo "$2: got $c want $3"; [ "$c" = "$3" ] || fail=1; }
+          chk https://pipedrive-mcp-oauth.sliplane.app/.well-known/oauth-authorization-server proxy-oauth 200
+          chk https://pipedrive-mcp-oauth.sliplane.app/mcp                                    proxy-mcp 401
+          chk https://ms365-mcp-server.sliplane.app/.well-known/oauth-authorization-server    ms365-oauth 200
+          chk https://pipedrive-mcp-server.sliplane.app/mcp                                   pipedrive-mcp 401
+          [ "$fail" = "0" ] && echo "ALL HEALTHY" || { echo "::error::en eller flere services er nede"; exit 1; }
